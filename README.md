@@ -20,10 +20,10 @@ python benchmark_end2end.py --compile --attention_type sparge_fp8
 
 # sta 目前官方只有 Hopper 架构的实现，4090跑不了
 
-nsys profile -t cuda,nvtx -o profile_fa --stats=true --force-overwrite true python benchmark_end2end.py --comile --attnetion_type fa
-nsys profile -t cuda,nvtx -o profile_sage2 --stats=true --force-overwrite true python benchmark_end2end.py --comile --attnetion_type sage2
-nsys profile -t cuda,nvtx -o profile_sparge --stats=true --force-overwrite true python benchmark_end2end.py --comile --attnetion_type sparge
-nsys profile -t cuda,nvtx -o profile_sparge_fp8 --stats=true --force-overwrite true python benchmark_end2end.py --comile --attnetion_type sparge_fp8
+nsys profile -t cuda,nvtx -o profile_fa --stats=true --force-overwrite true python benchmark_end2end.py --compile --attention_type fa
+nsys profile -t cuda,nvtx -o profile_sage2 --stats=true --force-overwrite true python benchmark_end2end.py --compile --attention_type sage2
+nsys profile -t cuda,nvtx -o profile_sparge --stats=true --force-overwrite true python benchmark_end2end.py --compile --attention_type sparge
+nsys profile -t cuda,nvtx -o profile_sparge_fp8 --stats=true --force-overwrite true python benchmark_end2end.py --compile --attention_type sparge_fp8
 ```
 
 ## FlashAttn (baseline)
