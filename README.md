@@ -49,6 +49,8 @@ baseline: torch backend flash_sdp
 
 为了对原始注意力做优化，需要多算一些信息，启动的 Kernel 数都有明显上升，时间上在 Sparge (fp8) 上大幅上升，同时， Sparge (fp8) 的 cuda内核启动时间已经是耗时第二个高 15.7% 的部分了。
 
+**UPD.** cudaStreamSynchronize，cudaLaunchKernel 属于 CPU 的耗时，GPU都是异步（
+
 ## 测试
 
 ```bash
