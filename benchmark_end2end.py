@@ -66,6 +66,7 @@ with torch.no_grad():
         torch.cuda.synchronize()
         starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
         starter.record()
+        torch.cuda.nvtx.range_push("Inference")
         video = pipe(
             prompt=prompt,
             num_videos_per_prompt=1,
@@ -74,6 +75,7 @@ with torch.no_grad():
             guidance_scale=6,
             generator=torch.Generator(device="cuda").manual_seed(42),
         ).frames[0]
+        torch.cuda.nvtx.range_pop()
         ender.record()
         torch.cuda.synchronize()
         elapsed = starter.elapsed_time(ender)

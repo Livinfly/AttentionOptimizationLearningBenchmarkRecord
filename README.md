@@ -15,7 +15,7 @@ baseline: torch backend flash_sdp
 
 -   CUDA 12.4
 
--   PyTorch 2.5.1
+-   PyTorch 2.6.0
 
     
 
@@ -29,49 +29,45 @@ baseline: torch backend flash_sdp
 
 由于自己手头 GTX 1660S 有若干特性不能支持，线上租用算力平台不支持 **ncu** 分析，所以主要分析依据是 **nsys**。
 
-下表是从 **CUDA Summary (API/Kernel/MemOps)** 摘出的比较突出的点。
+下表是从 **CUDA GPU Kernel Summary** 摘出的比较突出的点。
 
-（Warmup 2 轮，Run 1轮，10 \* 2 + 50，标准默认记录总耗时，cudaDeviceSynchronize, cuLaunchKernel 不另外分析了）
+Warmup 2 轮，Run 1轮，10 \* 2 + 50，NVTX 结果作为总耗时。
 
-| Metrics                   | FA2 (baseline) |  Sage2  | Sparge (fp16) | Sparge (fp8) |
-| ------------------------- | :------------: | :-----: | :-----------: | :----------: |
-| cudaStreamSynchronize (%) |     41.8%      |  32.9%  |     24.3%     |    23.1%     |
-| cudaStreamSynchronize (s) |     112.3s     |  78.5s  |     49.7s     |    46.3s     |
-| Attn (%)                  |     24.4%      |  12.0%  |     14.1%     |    12.2%     |
-| Attn (s)                  |     65.6s      |  28.6s  |     28.7s     |    24.5s     |
-| cudaLaunchKernel (times)  |    139,547     | 190,526 |    188,380    |   194,291    |
-| cudaLaunchKernel (s)      |     13.2s      |  14.7s  |     19.4s     |    31.3s     |
-| Total (s)                 |     88.4s      |  65.6s  |     67.2s     |    64.1s     |
+| Metrics                         | FA2 (baseline) |  Sage2   | Sparge (fp16) | Sparge (fp8) |
+| ------------------------------- | :------------: | :------: | :-----------: | :----------: |
+| Attn (%)                        |     53.7%      |  31.3%   |     32.2%     |    28.7%     |
+| Attn (s)                        |     45.4s      |  19.5s   |     20.4s     |    17.4s     |
+| direct_copy_kernel_cuda (times) |     10,835     |  10,885  |     12,385    |    12,385    |
+| direct_copy_kernel_cuda (ms)    |     373.4ms    |  373.8ms |     840.8ms   |    841.2ms   |
+| CUDAFunctor_add (times)         |     6,422      |  7,922   |     6,422     |    6,422     |
+| CUDAFunctor_add (ms)            |     650.5ms    |  1,045ms |     650.5ms   |    650.0ms   |
+| Total (s)                       |     85.4s      |  63.2s   |     64.3s     |    61.6s     |
 
-总的来说，**cudaStreamSynchronize** 的时间都是最长的，说明计算还是慢了，CPU 大部分时间在等待，三种优化方案都有不同程度的提升。
 
 占计算主要部分的 **Attn** 从占比和绝对数值上都优化到原本的二分之一。
+同时摘出 Instance 最多的 **direct_copy_kernel_cuda** 和 **CUDAFunctor_add**，数据拷贝和加法。
 
-为了对原始注意力做优化，需要多算一些信息，启动的 Kernel 数都有明显上升，时间上在 Sparge (fp8) 上大幅上升，同时， Sparge (fp8) 的 cuda内核启动时间已经是耗时第二个高 15.7% 的部分了。
+主要优化的耗时就是 Attn 计算优化出来的耗时，不过由于需要提前处理信息，会增加如数据拷贝和加法等耗时
 
-**UPD.** cudaStreamSynchronize，cudaLaunchKernel 属于 CPU 的耗时，GPU都是异步（
+除了本身计算量的减少，也有 fp8 计算加速的优化。
+
+**UPD.** cudaStreamSynchronize，cudaLaunchKernel 属于 CPU 的耗时，GPU都是异步。
 
 ## 测试
 
 ```bash
 python benchmark_end2end.py --compile --attention_type sdpa
-# Avg inference time: 88536.48 ms, runs=1
 python benchmark_end2end.py --compile --attention_type fa
-# Avg inference time: 88432.70 ms, runs=1
 python benchmark_end2end.py --compile --attention_type sage2
-# Avg inference time: 65574.58 ms, runs=1
 python benchmark_end2end.py --compile --attention_type sparge
-# Avg inference time: 67230.42 ms, runs=1
 python benchmark_end2end.py --compile --attention_type sparge_fp8
-# Avg inference time: 64075.88 ms, runs=1
-
 
 # sta 目前官方只有 Hopper 架构的实现，4090跑不了
 
-nsys profile -t cuda,nvtx -o profile_fa --stats=true --force-overwrite true python benchmark_end2end.py --compile --attention_type fa
-nsys profile -t cuda,nvtx -o profile_sage2 --stats=true --force-overwrite true python benchmark_end2end.py --compile --attention_type sage2
-nsys profile -t cuda,nvtx -o profile_sparge --stats=true --force-overwrite true python benchmark_end2end.py --compile --attention_type sparge
-nsys profile -t cuda,nvtx -o profile_sparge_fp8 --stats=true --force-overwrite true python benchmark_end2end.py --compile --attention_type sparge_fp8
+nsys profile -t cuda,nvtx -s none -o profile_fa --stats=true --force-overwrite true python benchmark_end2end.py --compile --attention_type fa
+nsys profile -t cuda,nvtx -s none -o profile_sage2 --stats=true --force-overwrite true python benchmark_end2end.py --compile --attention_type sage2
+nsys profile -t cuda,nvtx -s none -o profile_sparge --stats=true --force-overwrite true python benchmark_end2end.py --compile --attention_type sparge
+nsys profile -t cuda,nvtx -s none -o profile_sparge_fp8 --stats=true --force-overwrite true python benchmark_end2end.py --compile --attention_type sparge_fp8
 ```
 
 ## FlashAttn (baseline)
