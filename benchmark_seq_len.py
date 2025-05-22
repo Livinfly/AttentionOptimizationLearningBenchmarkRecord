@@ -31,24 +31,24 @@ torch.backends.cuda.enable_flash_sdp(True)
 torch.backends.cuda.enable_math_sdp(False)
 torch.backends.cuda.enable_mem_efficient_sdp(False)
 
-spargeattn = functools.partial(
-    spargeattn,
-    simthreshd1=0,
-    cdfthreshd=0.7,
-)
-spargeattn_fp8 = functools.partial(
-    spargeattn_fp8,
-    simthreshd1=0,
-    cdfthreshd=0.7,
-)
+# spargeattn = functools.partial(
+#     spargeattn,
+#     simthreshd1=0,
+#     cdfthreshd=0.7,
+# )
+# spargeattn_fp8 = functools.partial(
+#     spargeattn_fp8,
+#     simthreshd1=0,
+#     cdfthreshd=0.7,
+# )
 
 print(f"batch: {batch}, head: {head}, headdim: {headdim}")
 
 attention_functions_map = {
     "fa2": sdpa,
     "sage2": sageattn,
-    "sparge (30%)": spargeattn,
-    "sparge_fp8 (30%)": spargeattn_fp8
+    "sparge": spargeattn,
+    "sparge_fp8": spargeattn_fp8
 }
 
 print(f"Benchmarking functions: {list(attention_functions_map.keys())}")
