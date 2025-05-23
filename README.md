@@ -1,3 +1,5 @@
+> [学习记录](mlsys_paper_reports.md)
+
 # Benchmark_EXP
 
 默认以 CogVideoX-2b 模型任务为例，测试不同注意力模块的加速情况。
